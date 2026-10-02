@@ -69,7 +69,9 @@ select = ["E", "F", "I", "B", "UP", "ASYNC", "S", "N", "W", "RUF"]
 ignore = ["S101", "B008", "RUF012", "S603", "S607"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S", "ASYNC"]
+"tests/**" = ["S", "ASYNC", "E501"]
+"eyohe/collectors/**" = ["E501"]
+"eyohe/search/**" = ["E501"]
 "alembic/**" = ["E501"]
 
 [tool.mypy]

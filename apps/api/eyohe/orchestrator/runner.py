@@ -233,8 +233,13 @@ async def _run_task(ctx: RunContext, task: InvestigationTask) -> None:
             commit=False,
         )
     except (CollectorError, TimeoutError, Exception) as exc:
+        task_id = task.id
         await session.rollback()
-        task = await session.get(InvestigationTask, task.id) or task
+        # Rollback expired every instance; reload explicitly (no implicit lazy IO in async code).
+        await session.refresh(inv)
+        reloaded = await session.get(InvestigationTask, task_id, populate_existing=True)
+        if reloaded is not None:
+            task = reloaded
         task.status = TaskStatus.FAILED
         if isinstance(exc, TimeoutError):
             task.error = "Task timed out"

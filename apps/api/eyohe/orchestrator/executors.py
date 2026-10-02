@@ -76,7 +76,7 @@ def register_executor(task_type: str) -> Callable[[Executor], Executor]:
 
 
 async def collector_executor(ctx: RunContext, task: InvestigationTask) -> dict[str, Any]:
-    collector = collector_registry.get(task.task_type)
+    collector = collector_registry.get(_ALIASES.get(task.task_type, task.task_type))
     if collector is None:
         raise ConfigurationError(f"Collector '{task.task_type}' is not available in this build.")
     ttype, value = ctx.task_target(task)
@@ -101,8 +101,12 @@ async def collector_executor(ctx: RunContext, task: InvestigationTask) -> dict[s
     return out
 
 
+_ALIASES = {"subdomains": "ct_logs"}
+
+
 def get_executor(task_type: str) -> Executor | None:
     _load_builtin()
+    task_type = _ALIASES.get(task_type, task_type)
     if task_type in _EXECUTORS:
         return _EXECUTORS[task_type]
     if collector_registry.get(task_type) is not None:

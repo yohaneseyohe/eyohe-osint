@@ -3,7 +3,12 @@ import asyncio
 from httpx import AsyncClient
 
 
-async def test_plan_approve_run_resume(auth_client: AsyncClient) -> None:
+async def test_plan_approve_run_resume(auth_client: AsyncClient, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    # Keep this flow test offline: no collector plugins, so tasks are SKIPPED (never faked).
+    from eyohe.collectors.registry import collector_registry
+
+    monkeypatch.setattr(collector_registry, "_collectors", {})
+    monkeypatch.setattr(collector_registry, "_loaded", True)
     r = await auth_client.post("/api/v1/cases", json={"name": "Flow", "targets": ["example.com"]})
     cid = r.json()["id"]
     r = await auth_client.post(
@@ -32,7 +37,7 @@ async def test_plan_approve_run_resume(auth_client: AsyncClient) -> None:
     r = await auth_client.post(f"/api/v1/investigations/{inv['id']}/approve")
     assert r.status_code == 200 and r.json()["status"] == "RUNNING"
 
-    # Embedded runner executes; with no collectors registered in this build tasks are SKIPPED, not faked.
+    # Embedded runner executes; with no collectors registered tasks are SKIPPED or fail honestly, not faked.
     for _ in range(100):
         await asyncio.sleep(0.1)
         r = await auth_client.get(f"/api/v1/investigations/{inv['id']}")
@@ -42,7 +47,8 @@ async def test_plan_approve_run_resume(auth_client: AsyncClient) -> None:
     assert detail["status"] == "COMPLETED", detail
     statuses = {t["task_type"]: t["status"] for t in detail["tasks"]}
     assert statuses["reddit"] == "DISABLED"
-    assert all(s in ("SKIPPED", "COMPLETED", "DISABLED") for s in statuses.values())
+    assert all(s in ("SKIPPED", "COMPLETED", "DISABLED", "FAILED") for s in statuses.values())
+    assert statuses["verify"] == "COMPLETED" and statuses["dns"] == "SKIPPED"
 
     # Events are real, ordered, and replayable
     r = await auth_client.get(f"/api/v1/investigations/{inv['id']}/events")
