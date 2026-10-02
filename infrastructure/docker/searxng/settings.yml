@@ -1,0 +1,16 @@
+# SearXNG settings for Eyohe OSINT. JSON output is required for the API connector.
+use_default_settings: true
+general:
+  instance_name: "Eyohe Search"
+  debug: false
+search:
+  safe_search: 0
+  formats:
+    - html
+    - json
+server:
+  secret_key: "change-me-searxng-secret"
+  limiter: false
+  image_proxy: false
+ui:
+  static_use_hash: true

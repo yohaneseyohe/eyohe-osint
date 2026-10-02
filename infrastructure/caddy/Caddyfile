@@ -1,0 +1,14 @@
+# Local reverse proxy. For a LAN/hostname deployment replace :80 with your hostname
+# and Caddy will provision TLS automatically.
+:80 {
+	encode zstd gzip
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle /metrics {
+		respond "forbidden" 403
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}

@@ -1,0 +1,145 @@
+# Eyohe OSINT — local-first deployment.
+# Core profile: postgres, redis, api, web, caddy.
+# Optional profiles: search (SearXNG), worker (arq), neo4j.
+#   docker compose up -d                       # core
+#   docker compose --profile search up -d      # + SearXNG
+#   docker compose --profile worker up -d      # + background worker (set JOB_BACKEND=arq)
+#   docker compose --profile neo4j up -d       # + Neo4j (set GRAPH_BACKEND=neo4j)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-eyohe}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eyohe}
+      POSTGRES_DB: ${POSTGRES_DB:-eyohe}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eyohe}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", ""]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/api.Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-eyohe}:${POSTGRES_PASSWORD:-eyohe}@postgres:5432/${POSTGRES_DB:-eyohe}
+      REDIS_URL: redis://redis:6379/0
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      SEARXNG_URL: ${SEARXNG_URL:-http://searxng:8080}
+      DATA_DIR: /data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    deploy:
+      resources:
+        limits:
+          memory: 1500m
+
+  worker:
+    profiles: ["worker"]
+    build:
+      context: .
+      dockerfile: infrastructure/docker/api.Dockerfile
+    command: ["uv", "run", "arq", "eyohe.worker.WorkerSettings"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-eyohe}:${POSTGRES_PASSWORD:-eyohe}@postgres:5432/${POSTGRES_DB:-eyohe}
+      REDIS_URL: redis://redis:6379/0
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      SEARXNG_URL: ${SEARXNG_URL:-http://searxng:8080}
+      DATA_DIR: /data
+      JOB_BACKEND: arq
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/web.Dockerfile
+    environment:
+      API_INTERNAL_URL: http://api:8000
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "${CADDY_HTTP_PORT:-80}:80"
+      - "${CADDY_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./infrastructure/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - web
+      - api
+
+  searxng:
+    profiles: ["search"]
+    image: searxng/searxng:latest
+    environment:
+      SEARXNG_BASE_URL: http://localhost:8080/
+    volumes:
+      - ./infrastructure/docker/searxng:/etc/searxng:rw
+    ports:
+      - "${SEARXNG_PORT:-8080}:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  neo4j:
+    profiles: ["neo4j"]
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-eyohe-neo4j}
+      NEO4J_server_memory_heap_max__size: 512m
+      NEO4J_server_memory_pagecache_size: 256m
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4jdata:/data
+
+volumes:
+  pgdata:
+  caddy_data:
+  neo4jdata:
