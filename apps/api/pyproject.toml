@@ -72,6 +72,8 @@ ignore = ["S101", "B008", "RUF012", "S603", "S607"]
 "tests/**" = ["S", "ASYNC", "E501"]
 "eyohe/collectors/**" = ["E501"]
 "eyohe/search/**" = ["E501"]
+"eyohe/ai/**" = ["E501"]
+"eyohe/services/investigations.py" = ["E501"]
 "alembic/**" = ["E501"]
 
 [tool.mypy]

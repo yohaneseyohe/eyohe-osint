@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from eyohe.api.v1 import auth, cases, entities, evidence, findings, health, investigations, search, system
+from eyohe.api.v1 import ai, auth, cases, entities, evidence, findings, health, investigations, search, system
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router)
@@ -11,4 +11,5 @@ api_router.include_router(evidence.router)
 api_router.include_router(entities.router)
 api_router.include_router(findings.router)
 api_router.include_router(search.router)
+api_router.include_router(ai.router)
 api_router.include_router(system.router)

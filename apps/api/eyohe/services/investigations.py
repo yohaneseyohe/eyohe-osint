@@ -125,7 +125,15 @@ async def plan_investigation(
     plan = build_template_plan(inv.objective, TargetType(target.type), target.normalized_value)
     if use_ai:
         from eyohe.ai.planner import adapt_plan_with_ai
+        from eyohe.core.config import get_settings as _gs
 
+        await emit_event(
+            session,
+            inv,
+            EventType.AI_MESSAGE,
+            "AI",
+            f"Asking {_gs().ollama_model} to adapt the template plan to the objective (this can take a few minutes on CPU)",
+        )
         try:
             plan, note = await adapt_plan_with_ai(plan, inv.objective)
             if note:
@@ -150,6 +158,24 @@ async def plan_investigation(
         data={"task_count": len(plan.tasks), "source": plan.source},
     )
     return inv
+
+
+async def plan_investigation_background(investigation_id: str, *, use_ai: bool = True) -> None:
+    """Job entrypoint: AI plan adaptation can take minutes on CPU, so planning runs off the request path."""
+    from eyohe.core.db import get_session_factory
+
+    async with get_session_factory()() as session:
+        inv = await get_investigation(session, investigation_id)
+        try:
+            await plan_investigation(session, inv, None, use_ai=use_ai)
+            await session.commit()
+        except Exception as exc:
+            await session.rollback()
+            inv = await get_investigation(session, investigation_id)
+            inv.status = InvestigationStatus.FAILED
+            inv.error = f"Planning failed: {type(exc).__name__}: {exc}"[:2000]
+            await emit_event(session, inv, EventType.ERROR, "PLAN", inv.error, level="error", commit=False)
+            await session.commit()
 
 
 async def _apply_plan(session: AsyncSession, inv: Investigation, plan: Plan) -> None:

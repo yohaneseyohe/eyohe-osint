@@ -16,7 +16,7 @@ export function DialogContent({
   title,
   description,
   ...props
-}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+}: Omit<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>, "title"> & {
   side?: "center" | "right";
   title: React.ReactNode;
   description?: React.ReactNode;

@@ -14,6 +14,12 @@ async def run_investigation_job(ctx: Any, investigation_id: str) -> None:
     await run_investigation(investigation_id)
 
 
+async def plan_investigation_job(ctx: Any, investigation_id: str, use_ai: bool = True) -> None:
+    from eyohe.services.investigations import plan_investigation_background
+
+    await plan_investigation_background(investigation_id, use_ai=use_ai)
+
+
 async def run_monitor_job(ctx: Any, monitor_id: str) -> None:
     from eyohe.scheduler.monitors import run_monitor
 
@@ -28,6 +34,7 @@ async def generate_report_job(ctx: Any, report_id: str) -> None:
 
 JOB_FUNCTIONS = {
     "run_investigation": run_investigation_job,
+    "plan_investigation": plan_investigation_job,
     "run_monitor": run_monitor_job,
     "generate_report": generate_report_job,
 }

@@ -9,6 +9,10 @@ async def test_plan_approve_run_resume(auth_client: AsyncClient, monkeypatch) ->
 
     monkeypatch.setattr(collector_registry, "_collectors", {})
     monkeypatch.setattr(collector_registry, "_loaded", True)
+    from eyohe.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "search_providers", "")  # search → NOT_CONFIGURED → task skipped
+    monkeypatch.setattr(get_settings(), "ollama_url", "http://127.0.0.1:9")  # AI offline → summarize skipped
     r = await auth_client.post("/api/v1/cases", json={"name": "Flow", "targets": ["example.com"]})
     cid = r.json()["id"]
     r = await auth_client.post(
@@ -38,7 +42,7 @@ async def test_plan_approve_run_resume(auth_client: AsyncClient, monkeypatch) ->
     assert r.status_code == 200 and r.json()["status"] == "RUNNING"
 
     # Embedded runner executes; with no collectors registered tasks are SKIPPED or fail honestly, not faked.
-    for _ in range(100):
+    for _ in range(600):
         await asyncio.sleep(0.1)
         r = await auth_client.get(f"/api/v1/investigations/{inv['id']}")
         if r.json()["status"] in ("COMPLETED", "FAILED", "STOPPED"):

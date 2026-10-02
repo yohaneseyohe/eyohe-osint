@@ -67,6 +67,14 @@ async def start_investigation(payload: InvestigationStart, user: Analyst, db: DB
         db, case, user, request_text=payload.request_text, target=target, name=payload.name, bounds=payload.bounds
     )
     await db.commit()
+    if payload.use_ai and not payload.auto_approve:
+        # AI plan adaptation runs in the background; the UI follows PLANNING → AWAITING_APPROVAL via events.
+        inv.status = InvestigationStatus.PLANNING
+        await db.commit()
+        from eyohe.orchestrator.jobs import job_manager
+
+        await job_manager.enqueue("plan_investigation", str(inv.id), True, key=f"plan:{inv.id}")
+        return await _detail(db, inv.id)
     await inv_service.plan_investigation(db, inv, user, use_ai=payload.use_ai)
     await db.commit()
     if payload.auto_approve:
@@ -90,12 +98,20 @@ async def investigation_status(inv_id: str, _: CurrentUser, db: DB) -> dict[str,
 @router.post("/{inv_id}/plan", response_model=InvestigationDetail)
 async def replan(inv_id: str, user: Analyst, db: DB, use_ai: bool = True) -> InvestigationDetail:
     inv = await inv_service.get_investigation(db, inv_id)
-    if inv.status not in (InvestigationStatus.DRAFT, InvestigationStatus.AWAITING_APPROVAL, InvestigationStatus.FAILED):
-        inv.status = InvestigationStatus.DRAFT
-    elif inv.status == InvestigationStatus.AWAITING_APPROVAL:
-        inv.status = InvestigationStatus.DRAFT
+    if inv.status in (InvestigationStatus.RUNNING, InvestigationStatus.VERIFYING):
+        from eyohe.core.errors import ConflictError
+
+        raise ConflictError("Pause or stop the investigation before re-planning.")
+    inv.status = InvestigationStatus.DRAFT
     await db.commit()
-    await inv_service.plan_investigation(db, inv, user, use_ai=use_ai)
+    if use_ai:
+        inv.status = InvestigationStatus.PLANNING
+        await db.commit()
+        from eyohe.orchestrator.jobs import job_manager
+
+        await job_manager.enqueue("plan_investigation", str(inv.id), True, key=f"plan:{inv.id}")
+        return await _detail(db, inv.id)
+    await inv_service.plan_investigation(db, inv, user, use_ai=False)
     await db.commit()
     return await _detail(db, inv.id)
 
