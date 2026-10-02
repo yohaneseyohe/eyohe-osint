@@ -1,7 +1,16 @@
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
 import { apiGet } from "./api";
 import type {
+  AIModels,
+  AIPassage,
+  AlertsPage,
   AuditPage,
+  CaseSearchQuery,
+  MonitorOut,
+  ReportDetail,
+  ReportOut,
+  SearchProviders,
+  SearchResultOut,
   CaseDetail,
   CaseOut,
   CollectorInfo,
@@ -64,6 +73,15 @@ export const qk = {
   settings: ["settings"] as const,
   collectors: ["collectors"] as const,
   users: ["users"] as const,
+  searchProviders: ["search", "providers"] as const,
+  caseQueries: (caseId: string) => ["case", caseId, "search-queries"] as const,
+  caseResults: (caseId: string, p?: Params) => ["case", caseId, "search-results", p ?? {}] as const,
+  aiModels: ["ai", "models"] as const,
+  aiRetrieve: (caseId: string, q: string) => ["case", caseId, "ai-retrieve", q] as const,
+  reports: (caseId: string | null) => ["reports", caseId ?? "all"] as const,
+  report: (id: string) => ["report", id] as const,
+  monitors: (caseId: string | null) => ["monitors", caseId ?? "all"] as const,
+  alerts: (p?: Params) => ["alerts", p ?? {}] as const,
 };
 
 type Opts<T> = Omit<UseQueryOptions<T, Error>, "queryKey" | "queryFn">;
@@ -210,3 +228,58 @@ export const useCollectors = () =>
 
 export const useUsers = (enabled: boolean) =>
   useQuery({ queryKey: qk.users, queryFn: () => apiGet<UserOut[]>("/auth/users"), enabled, retry: false });
+
+export const useSearchProviders = () =>
+  useQuery({ queryKey: qk.searchProviders, queryFn: () => apiGet<SearchProviders>("/search/providers"), staleTime: 30_000 });
+
+export const useCaseQueries = (caseId: string | null) =>
+  useQuery({
+    queryKey: qk.caseQueries(caseId ?? ""),
+    queryFn: () => apiGet<CaseSearchQuery[]>(`/search/cases/${caseId}/queries`),
+    enabled: !!caseId,
+  });
+
+export const useCaseResults = (caseId: string | null, p?: Params) =>
+  useQuery({
+    queryKey: qk.caseResults(caseId ?? "", p),
+    queryFn: () => apiGet<SearchResultOut[]>(`/search/cases/${caseId}/results`, p),
+    enabled: !!caseId,
+  });
+
+export const useAiModels = () =>
+  useQuery({ queryKey: qk.aiModels, queryFn: () => apiGet<AIModels>("/ai/models"), staleTime: 30_000 });
+
+export const useAiRetrieve = (caseId: string | null, q: string, enabled: boolean) =>
+  useQuery({
+    queryKey: qk.aiRetrieve(caseId ?? "", q),
+    queryFn: () => apiGet<AIPassage[]>(`/ai/cases/${caseId}/retrieve`, { q, k: 12 }),
+    enabled: !!caseId && !!q && enabled,
+  });
+
+const REPORT_BUSY = new Set(["PENDING", "GENERATING"]);
+
+export const useReports = (caseId: string | null) =>
+  useQuery({
+    queryKey: qk.reports(caseId),
+    queryFn: () => apiGet<ReportOut[]>("/reports", caseId ? { case_id: caseId } : undefined),
+    // Poll while any report is still being generated.
+    refetchInterval: (q) => (q.state.data?.some((r) => REPORT_BUSY.has(r.status)) ? 3_000 : false),
+  });
+
+export const useReport = (id: string | null) =>
+  useQuery({
+    queryKey: qk.report(id ?? ""),
+    queryFn: () => apiGet<ReportDetail>(`/reports/${id}`),
+    enabled: !!id,
+    refetchInterval: (q) => (q.state.data && REPORT_BUSY.has(q.state.data.status) ? 3_000 : false),
+  });
+
+export const useMonitors = (caseId: string | null) =>
+  useQuery({
+    queryKey: qk.monitors(caseId),
+    queryFn: () => apiGet<MonitorOut[]>("/monitors", caseId ? { case_id: caseId } : undefined),
+    refetchInterval: 30_000,
+  });
+
+export const useAlerts = (p?: Params) =>
+  useQuery({ queryKey: qk.alerts(p), queryFn: () => apiGet<AlertsPage>("/alerts", p), refetchInterval: 30_000 });

@@ -700,3 +700,212 @@ export interface CollectorInfo {
   requires_internet: boolean;
   health: { name: string; status: string; message: string; latency_ms: number | null } | null;
 }
+
+// --- search (api/v1/search.py; responses are untyped dicts in the spec) ------
+
+export type SearchCategory = "general" | "news" | "code" | "social" | "documents";
+
+export interface SearchResultOut {
+  id: string | null;
+  query_id?: string;
+  case_id?: string;
+  rank: number;
+  title: string;
+  url: string;
+  canonical_url: string;
+  domain: string;
+  snippet: string;
+  published_at: string | null;
+  collected_at?: string;
+  engine: string;
+  relevance: number;
+  status: string;
+  source_id: string | null;
+  entities?: { type: string; value: string }[];
+}
+
+export interface SearchResponse {
+  query_id: string | null;
+  provider: string;
+  cache_hit: boolean;
+  elapsed_ms: number | null;
+  warnings: string[];
+  results: SearchResultOut[];
+}
+
+export interface SearchProviders {
+  health: { status: string; message: string; configured?: string[]; problems?: string[] };
+  providers: { name: string; configured: boolean; note: string }[];
+}
+
+export interface SearchBranch {
+  name: string;
+  query: string;
+  category: string;
+}
+
+export interface ResultActionOut {
+  result_id: string;
+  action: string;
+  source_id?: string;
+  evidence_id?: string;
+  evidence_display_id?: string;
+  target_id?: string;
+  note?: string;
+}
+
+export interface CaseSearchQuery {
+  id: string;
+  branch: string;
+  query: string;
+  provider: string;
+  status: string;
+  enabled: boolean;
+  result_count: number;
+  error: string | null;
+  executed_at: string | null;
+  cache_hit: boolean;
+  created_at: string;
+}
+
+// --- AI analyst (api/v1/ai.py) -------------------------------------------
+
+export interface AIIntent {
+  kind: string;
+  filters: Record<string, unknown>;
+  route: string;
+  explanation: string;
+}
+
+export interface AIPassage {
+  ref: string;
+  kind: "evidence" | "finding" | "note" | "snapshot" | "entity" | string;
+  text: string;
+  score?: number;
+  meta: Record<string, unknown>;
+}
+
+export interface AIAnswer {
+  answer: string;
+  citations: AIPassage[];
+  passages: AIPassage[];
+  uncited_sentences: string[];
+  model: string | null;
+}
+
+export interface AIQueryResponse {
+  intent: AIIntent;
+  answer?: AIAnswer;
+}
+
+export interface AIModels {
+  available: boolean;
+  configured: string;
+  models: { name: string; size_gb: number; family: string | null; parameters: string | null }[];
+}
+
+export interface DraftFindingsOut {
+  created: number;
+  rejected?: number;
+  finding_ids?: string[];
+  note?: string;
+  skipped?: boolean;
+}
+
+// --- reports / exports / imports (api/v1/reports.py, imports.py) --------
+
+export type ReportFormat = "markdown" | "html" | "pdf" | "docx";
+export type ReportStatus = "PENDING" | "GENERATING" | "READY" | "FAILED";
+
+export interface ReportOut {
+  id: string;
+  display_id: string;
+  case_id: string;
+  title: string;
+  format: ReportFormat | string;
+  classification: string;
+  status: ReportStatus | string;
+  file_path: string | null;
+  sha256: string | null;
+  size_bytes: number | null;
+  generated_at: string | null;
+  generation_ms: number | null;
+  stats: Record<string, unknown>;
+  error: string | null;
+  created_at: string;
+}
+
+export interface ReportDetail extends ReportOut {
+  sections: { key: string; title: string; cited_ids: string[] }[];
+}
+
+export interface ImportResult {
+  entities: number;
+  sources: number;
+  evidence: number;
+  skipped: number;
+  kind: string;
+}
+
+// --- monitoring (api/v1/monitoring.py) -----------------------------------
+
+export type MonitorCheck = "dns" | "ct" | "search" | "github" | "reddit" | "news";
+
+export interface MonitorNotify {
+  telegram?: boolean;
+  webhook?: boolean;
+  email?: boolean;
+  email_to?: string;
+}
+
+export interface MonitorOut {
+  id: string;
+  display_id: string;
+  case_id: string;
+  name: string;
+  target_value: string;
+  target_type: string;
+  checks: string[];
+  schedule: string;
+  enabled: boolean;
+  keywords: string[];
+  notify: MonitorNotify;
+  last_run_at: string | null;
+  next_run_at: string | null;
+  last_status: string | null;
+  last_error: string | null;
+  run_count: number;
+  created_at: string;
+  has_baseline: boolean;
+}
+
+export interface MonitorCreate {
+  case_id: string;
+  name: string;
+  target_id?: string | null;
+  target_value?: string | null;
+  target_type?: string | null;
+  checks?: string[];
+  schedule?: string;
+  keywords?: string[];
+  notify?: MonitorNotify;
+}
+
+export interface AlertOut {
+  id: string;
+  display_id: string;
+  case_id: string;
+  monitor_id: string | null;
+  alert_type: string;
+  severity: string;
+  title: string;
+  message: string;
+  source_label: string;
+  data: Record<string, unknown>;
+  read: boolean;
+  acknowledged_at: string | null;
+  delivered: boolean;
+  detected_at: string;
+}
+
+export type AlertsPage = Page<AlertOut>;

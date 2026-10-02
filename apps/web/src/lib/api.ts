@@ -113,3 +113,16 @@ export function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   return "Something went wrong";
 }
+
+/** Multipart upload (imports). Lets the browser set the boundary; still sends the CSRF header. */
+export async function apiUpload<T>(path: string, file: File, fieldName = "file"): Promise<T> {
+  const form = new FormData();
+  form.append(fieldName, file);
+  const headers: Record<string, string> = { Accept: "application/json" };
+  const csrf = readCookie(CSRF_COOKIE);
+  if (csrf) headers["X-CSRF-Token"] = csrf;
+  const res = await fetch(`/api/v1${path}`, { method: "POST", headers, body: form, credentials: "same-origin" });
+  if (res.status === 401) redirectToLogin();
+  if (!res.ok) throw await parseError(res);
+  return (await res.json()) as T;
+}

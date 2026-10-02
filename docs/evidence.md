@@ -52,3 +52,10 @@ until an analyst accepts them. The rationale returned by the engine powers the *
 `data/evidence/{case_id}/{kind}/{sha256[:2]}/{sha256}.{ext}` with a `.meta.json` sidecar. Paths
 are derived from identifiers only and checked against the vault root. `EVIDENCE_RETENTION_DAYS`
 enables purging; `make backup` / `make restore` include the vault.
+
+## Screenshots
+
+`POST /api/v1/sources/{id}/screenshot` renders the (already public) page with headless Chromium
+(fixed arguments, temporary profile, 60 s timeout, SSRF-validated URL), stores the PNG in the vault
+with browser, viewport, hash and timestamp, and records it as `SCREENSHOT` evidence attached to the
+source.

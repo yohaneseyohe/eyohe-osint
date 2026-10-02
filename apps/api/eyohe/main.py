@@ -26,6 +26,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging()
     settings = get_settings()
     settings.data_dir.mkdir(parents=True, exist_ok=True)
+    if settings.is_production:
+        # Refuse to start with development defaults that would make sessions forgeable or the vault unsafe.
+        if "change-me" in settings.secret_key or "insecure" in settings.secret_key or len(settings.secret_key) < 32:
+            raise RuntimeError("SECRET_KEY must be a long random value in production (make setup generates one).")
+        if settings.allow_private_network_fetch:
+            log.warning("ALLOW_PRIVATE_NETWORK_FETCH is enabled in production; SSRF protections are weakened")
     log.info("startup", version=__version__, env=settings.eyohe_env, job_backend=settings.job_backend)
     from eyohe.orchestrator.jobs import job_manager
 
