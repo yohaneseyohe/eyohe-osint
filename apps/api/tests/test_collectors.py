@@ -123,7 +123,7 @@ async def test_github_redacts_secrets_and_handles_rate_limit(monkeypatch: pytest
                     {
                         "full_name": "acme/site",
                         "html_url": "https://github.com/acme/site",
-                        "description": "Site for example.com key=ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",
+                        "description": "Site for example.com key=ghp_FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE",
                         "stargazers_count": 3,
                         "language": "TypeScript",
                         "created_at": "2024-11-03T00:00:00Z",
@@ -145,7 +145,7 @@ async def test_github_redacts_secrets_and_handles_rate_limit(monkeypatch: pytest
                         "html_url": "https://github.com/acme/site/blob/main/.env.example",
                         "path": ".env.example",
                         "repository": {"full_name": "acme/site"},
-                        "text_matches": [{"fragment": "API_URL=https://example.com\nAWS_KEY=AKIAABCDEFGHIJKLMNOP"}],
+                        "text_matches": [{"fragment": "API_URL=https://example.com\nAWS_KEY=AKIAFAKEFAKEFAKEFAKE"}],
                     }
                 ],
             },
@@ -155,7 +155,7 @@ async def test_github_redacts_secrets_and_handles_rate_limit(monkeypatch: pytest
     assert col is not None
     res = await col.collect(ctx(), TargetType.DOMAIN, "example.com")
     blob = " ".join(e.claim + e.excerpt for e in res.evidence) + " ".join(s.text_content for s in res.sources)
-    assert "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ012345" not in blob and "AKIAABCDEFGHIJKLMNOP" not in blob
+    assert "ghp_FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE" not in blob and "AKIAFAKEFAKEFAKEFAKE" not in blob
     assert any("redacted" in e.excerpt.lower() for e in res.evidence)
     assert res.summary["repositories"] == 1 and res.summary["code_hits"] == 1
 

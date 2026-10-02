@@ -10,8 +10,8 @@ def test_password_hash_roundtrip() -> None:
 
 
 def test_redaction() -> None:
-    text = "token=ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123 and api_key: supersecret123 AKIAABCDEFGHIJKLMNOP"
+    text = "token=ghp_FAKEFAKEFAKEFAKEFAKEFAKEFAKE00 and api_key: supersecret123 AKIAFAKEFAKEFAKEFAKE"
     out = redact_text(text)
-    assert "ghp_" not in out and "supersecret123" not in out and "AKIAABCDEFGHIJKLMNOP" not in out
-    assert contains_secret("ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123")
+    assert "ghp_" not in out and "supersecret123" not in out and "AKIAFAKEFAKEFAKEFAKE" not in out
+    assert contains_secret("ghp_FAKEFAKEFAKEFAKEFAKEFAKEFAKE00")
     assert not contains_secret("hello world")
