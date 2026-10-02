@@ -49,7 +49,7 @@ Categories: infrastructure | organisation | social | historical | identity | doc
 
 
 async def draft_findings(
-    session: AsyncSession, case_id: uuid.UUID, *, investigation_id: uuid.UUID | None = None, limit_evidence: int = 60
+    session: AsyncSession, case_id: uuid.UUID, *, investigation_id: uuid.UUID | None = None, limit_evidence: int = 40
 ) -> dict[str, Any]:
     client = OllamaClient()
     if not await client.available():
@@ -73,8 +73,8 @@ async def draft_findings(
         {
             "id": ev.display_id,
             "type": ev.evidence_type,
-            "claim": ev.claim[:300],
-            "excerpt": ev.excerpt[:200],
+            "claim": ev.claim[:180],
+            "excerpt": ev.excerpt[:100],
             "source": (src.domain if src else ev.collector),
             "tier": src.tier if src else None,
             "collector": ev.collector,
@@ -93,7 +93,8 @@ async def draft_findings(
         ],
         schema=_SCHEMA,
         purpose="summarize",
-        max_tokens=2500,
+        max_tokens=1200,
+        num_ctx=6144,
     )
     created = 0
     rejected = 0
