@@ -43,10 +43,10 @@ export function InvestigationDetailView({ id }: { id: string }) {
         {inv.error ? <p className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-xs text-danger">{inv.error}</p> : null}
         {inv.status === "AWAITING_APPROVAL" ? <p className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">Review the plan below. Toggle tasks you do not want, then approve to start collection.</p> : null}
       </PageHeader>
-      <div className="grid gap-4 2xl:grid-cols-[1fr_1fr_22rem] xl:grid-cols-[1fr_1fr]">
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_20rem] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_22rem]">
         <PlanPanel inv={inv} />
         <LiveFeed investigationId={inv.id} live={LIVE.has(inv.status)} />
-        <div className="xl:col-span-2 2xl:col-span-1"><StatusPanel investigationId={inv.id} /></div>
+        <div className="lg:col-span-2 xl:col-span-1"><StatusPanel investigationId={inv.id} /></div>
       </div>
     </div>
   );

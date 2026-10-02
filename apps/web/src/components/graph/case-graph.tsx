@@ -86,7 +86,7 @@ function Canvas({ caseId, data, focus, onFocus, onReset }: { caseId: string; dat
   useEffect(() => {
     setNodes(built.nodes);
     setEdges(built.edges);
-    const t = window.setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 50);
+    const t = window.setTimeout(() => fitView({ padding: 0.2, duration: 300, maxZoom: 1.25 }), 50);
     return () => window.clearTimeout(t);
   }, [built, setNodes, setEdges, fitView]);
 
@@ -151,6 +151,7 @@ function Canvas({ caseId, data, focus, onFocus, onReset }: { caseId: string; dat
           onEdgeClick={onEdgeClick}
           onPaneClick={() => { setSelectedNode(null); setSelectedEdge(null); }}
           fitView
+          fitViewOptions={{ padding: 0.2, maxZoom: 1.25 }}
           minZoom={0.1}
           maxZoom={2.5}
           proOptions={{ hideAttribution: true }}
