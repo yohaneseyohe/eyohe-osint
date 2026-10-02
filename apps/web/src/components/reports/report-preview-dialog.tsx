@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useReport } from "@/lib/queries";
 import { Dialog, DialogBody, DialogContent } from "@/components/ui/dialog";
 import { Mono } from "@/components/shared/mono";
@@ -8,25 +8,21 @@ import { SectionTitle } from "@/components/shared/page-header";
 import { ErrorState, LoadingState } from "@/components/shared/states";
 import { TypeChip } from "@/components/shared/badges";
 
+/** Preview bodies are plain text/HTML, so this bypasses the JSON client but keeps the same error shape. */
 function usePreviewText(reportId: string | null, enabled: boolean) {
-  const [state, setState] = useState<{ text: string | null; error: string | null; loading: boolean }>({ text: null, error: null, loading: false });
-  useEffect(() => {
-    if (!reportId || !enabled) return;
-    let cancelled = false;
-    setState({ text: null, error: null, loading: true });
-    fetch(`/api/v1/reports/${reportId}/preview`, { credentials: "same-origin" })
-      .then(async (res) => {
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({ message: res.statusText }));
-          throw new Error(typeof body.message === "string" ? body.message : "Preview unavailable");
-        }
-        return res.text();
-      })
-      .then((text) => { if (!cancelled) setState({ text, error: null, loading: false }); })
-      .catch((e: Error) => { if (!cancelled) setState({ text: null, error: e.message, loading: false }); });
-    return () => { cancelled = true; };
-  }, [reportId, enabled]);
-  return state;
+  return useQuery({
+    queryKey: ["report", reportId ?? "", "preview"],
+    enabled: !!reportId && enabled,
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/reports/${reportId}/preview`, { credentials: "same-origin" });
+      if (!res.ok) {
+        const body: unknown = await res.json().catch(() => ({ message: res.statusText }));
+        const message = body && typeof body === "object" && "message" in body ? String((body as { message: unknown }).message) : "Preview unavailable";
+        throw new Error(message);
+      }
+      return res.text();
+    },
+  });
 }
 
 export function ReportPreviewDialog({ reportId, onClose }: { reportId: string | null; onClose: () => void }) {
@@ -69,13 +65,13 @@ export function ReportPreviewDialog({ reportId, onClose }: { reportId: string | 
             {previewable ? (
               <section className="space-y-2">
                 <SectionTitle>Preview</SectionTitle>
-                {preview.loading ? <LoadingState rows={6} /> : null}
-                {preview.error ? <p className="text-xs text-danger">{preview.error}</p> : null}
-                {preview.text !== null ? (
+                {preview.isPending ? <LoadingState rows={6} /> : null}
+                {preview.isError ? <p className="text-xs text-danger">{preview.error.message}</p> : null}
+                {preview.data !== undefined ? (
                   r.format === "html" ? (
-                    <iframe title="Report preview" sandbox="" srcDoc={preview.text} className="h-[70vh] w-full rounded-md border border-border bg-white" />
+                    <iframe title="Report preview" sandbox="" srcDoc={preview.data} className="h-[70vh] w-full rounded-md border border-border bg-white" />
                   ) : (
-                    <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap rounded-md border border-border bg-bg-elevated p-3 font-mono text-[11px] leading-relaxed text-fg-muted">{preview.text}</pre>
+                    <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap rounded-md border border-border bg-bg-elevated p-3 font-mono text-[11px] leading-relaxed text-fg-muted">{preview.data}</pre>
                   )
                 ) : null}
               </section>

@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Bell } from "lucide-react";
+import { Bell, CheckCheck } from "lucide-react";
+import { useAlerts } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useDashboard } from "@/lib/queries";
+import { AlertRow, useAlertActions } from "@/components/monitoring/alerts-list";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function NotificationsBell() {
-  const dash = useDashboard();
-  const unread = dash.data?.unread_alerts ?? 0;
+  const alerts = useAlerts({ unread: true, page_size: 10 });
+  const { ack, readAll } = useAlertActions();
+  const unread = alerts.data?.total ?? 0;
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -21,17 +24,19 @@ export function NotificationsBell() {
           ) : null}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72">
-        <p className="text-xs font-semibold uppercase tracking-wider text-fg-muted">Alerts</p>
-        <p className="mt-2 text-sm text-fg">
-          {unread === 0 ? "No unread alerts." : `${unread} unread alert${unread === 1 ? "" : "s"}.`}
-        </p>
-        <p className="mt-1 text-xs text-fg-subtle">
-          Alert details and monitoring rules arrive with the Monitoring phase.{" "}
-          <Link href="/monitoring" className="text-accent-bright hover:underline">
-            Open Monitoring
-          </Link>
-        </p>
+      <PopoverContent className="w-96 p-0">
+        <div className="flex items-center justify-between border-b border-border px-3 py-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-fg-muted">Unread alerts {unread > 0 ? `(${unread})` : ""}</p>
+          <Button variant="ghost" size="xs" onClick={() => readAll.mutate(null)} disabled={unread === 0} loading={readAll.isPending}><CheckCheck /> Read all</Button>
+        </div>
+        {alerts.isPending ? <div className="space-y-2 p-3"><Skeleton className="h-10" /><Skeleton className="h-10" /></div> : null}
+        {alerts.data && alerts.data.items.length === 0 ? <p className="px-3 py-6 text-center text-xs text-fg-subtle">No unread alerts.</p> : null}
+        {alerts.data && alerts.data.items.length > 0 ? (
+          <ul className="max-h-96 divide-y divide-border overflow-y-auto">{alerts.data.items.map((a) => <AlertRow key={a.id} a={a} compact onAck={(id) => ack.mutate(id)} />)}</ul>
+        ) : null}
+        <div className="border-t border-border px-3 py-2 text-right">
+          <Link href="/monitoring" className="text-xs text-accent-bright hover:underline">Open Monitoring</Link>
+        </div>
       </PopoverContent>
     </Popover>
   );
