@@ -80,7 +80,10 @@ class EventBus:
             with contextlib.suppress(Exception):
                 await r.publish("eyohe:events", orjson.dumps(payload))
 
-    async def subscribe(self, investigation_id: str) -> AsyncIterator[dict[str, Any]]:
+    @contextlib.asynccontextmanager
+    async def subscription(self, investigation_id: str) -> AsyncIterator[asyncio.Queue[dict[str, Any]]]:
+        """Queue-based subscription. Consumers use ``asyncio.wait_for(queue.get(), timeout)`` for
+        heartbeats; cancelling a pending ``get`` is safe, unlike cancelling an async generator."""
         q: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=1000)
         self._subs[investigation_id].add(q)
         relay: asyncio.Task[None] | None = None
@@ -88,12 +91,16 @@ class EventBus:
         if r is not None and get_settings().job_backend == "arq":
             relay = asyncio.create_task(self._relay_redis(investigation_id, q))
         try:
-            while True:
-                yield await q.get()
+            yield q
         finally:
             self._subs[investigation_id].discard(q)
             if relay:
                 relay.cancel()
+
+    async def subscribe(self, investigation_id: str) -> AsyncIterator[dict[str, Any]]:
+        async with self.subscription(investigation_id) as q:
+            while True:
+                yield await q.get()
 
     async def _relay_redis(self, investigation_id: str, q: asyncio.Queue[dict[str, Any]]) -> None:
         r = await self._get_redis()

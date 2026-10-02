@@ -167,13 +167,12 @@ async def stream_events(inv_id: str, request: Request, _: CurrentUser, db: DB, a
         for e in await replay_events(inv.id, after, 2000):
             last = e["seq"]
             yield {"event": "investigation", "id": str(last), "data": orjson.dumps(e).decode()}
-        sub = event_bus.subscribe(inv_key).__aiter__()
-        try:
+        async with event_bus.subscription(inv_key) as queue:
             while True:
                 if await request.is_disconnected():
                     break
                 try:
-                    e = await asyncio.wait_for(sub.__anext__(), timeout=15)
+                    e = await asyncio.wait_for(queue.get(), timeout=15)
                 except TimeoutError:
                     yield {"event": "ping", "data": orjson.dumps({"seq": last}).decode()}
                     continue
@@ -186,10 +185,6 @@ async def stream_events(inv_id: str, request: Request, _: CurrentUser, db: DB, a
                     continue
                 last = e["seq"]
                 yield {"event": "investigation", "id": str(last), "data": orjson.dumps(e).decode()}
-        finally:
-            aclose = getattr(sub, "aclose", None)
-            if aclose is not None:
-                await aclose()
 
     return EventSourceResponse(gen(), ping=20)
 

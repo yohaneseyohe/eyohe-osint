@@ -21,7 +21,8 @@ os.environ.setdefault("RATE_LIMIT_PER_MINUTE", "100000")
 def tmp_data_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
     d = tmp_path_factory.mktemp("eyohe-data")
     os.environ["DATA_DIR"] = str(d)
-    os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{d / 'test.sqlite3'}"
+    if not os.environ.get("EYOHE_PG_TEST"):  # EYOHE_PG_TEST=1 keeps DATABASE_URL (PostgreSQL) as given
+        os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{d / 'test.sqlite3'}"
     from eyohe.core.config import get_settings
 
     get_settings.cache_clear()
@@ -36,6 +37,8 @@ async def _schema(tmp_data_dir: Path) -> AsyncIterator[None]:
     reset_engine_for_tests(os.environ["DATABASE_URL"])
     engine = get_engine()
     async with engine.begin() as conn:
+        if os.environ.get("EYOHE_PG_TEST"):
+            await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     yield
     await engine.dispose()
