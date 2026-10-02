@@ -34,7 +34,10 @@ class Investigation(UUIDMixin, TimestampMixin, Base):
 
     case: Mapped[Case] = relationship(back_populates="investigations")
     tasks: Mapped[list[InvestigationTask]] = relationship(
-        back_populates="investigation", cascade="all, delete-orphan", order_by="InvestigationTask.order"
+        back_populates="investigation",
+        cascade="all, delete-orphan",
+        order_by="InvestigationTask.order",
+        lazy="selectin",
     )
 
 

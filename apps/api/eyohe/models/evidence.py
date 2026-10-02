@@ -42,7 +42,9 @@ class Evidence(UUIDMixin, TimestampMixin, Base):
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     redacted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    artifacts: Mapped[list[EvidenceArtifact]] = relationship(back_populates="evidence", cascade="all, delete-orphan")
+    artifacts: Mapped[list[EvidenceArtifact]] = relationship(
+        back_populates="evidence", cascade="all, delete-orphan", lazy="selectin"
+    )
 
 
 class EvidenceArtifact(UUIDMixin, Base):

@@ -34,7 +34,7 @@ class Source(UUIDMixin, TimestampMixin, Base):
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     snapshots: Mapped[list[SourceSnapshot]] = relationship(
-        back_populates="source", cascade="all, delete-orphan", order_by="SourceSnapshot.retrieved_at"
+        back_populates="source", cascade="all, delete-orphan", order_by="SourceSnapshot.retrieved_at", lazy="selectin"
     )
 
 

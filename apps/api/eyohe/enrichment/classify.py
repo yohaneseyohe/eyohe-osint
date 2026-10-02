@@ -100,7 +100,7 @@ def classify_target(raw: str) -> tuple[TargetType, str, dict[str, str]]:
         if path == "" and host:
             return TargetType.DOMAIN, host, extra
         return TargetType.URL, normalize_url(url), extra
-    if _DOMAIN.match(value):
+    if _DOMAIN.match(value.rstrip(".")):
         return TargetType.DOMAIN, value.lower().rstrip("."), extra
     if _BTC.match(value) or _ETH.match(value):
         extra["chain"] = "ethereum" if _ETH.match(value) else "bitcoin"

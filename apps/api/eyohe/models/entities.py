@@ -28,7 +28,9 @@ class Entity(UUIDMixin, TimestampMixin, Base):
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     merged_into_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("entities.id", ondelete="SET NULL"))
 
-    aliases: Mapped[list[EntityAlias]] = relationship(back_populates="entity", cascade="all, delete-orphan")
+    aliases: Mapped[list[EntityAlias]] = relationship(
+        back_populates="entity", cascade="all, delete-orphan", lazy="selectin"
+    )
 
 
 class EntityAlias(UUIDMixin, Base):

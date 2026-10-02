@@ -13,6 +13,8 @@ os.environ.setdefault("EYOHE_ENV", "test")
 os.environ.setdefault("LOG_JSON", "false")
 os.environ.setdefault("LOG_LEVEL", "WARNING")
 os.environ.setdefault("JOB_BACKEND", "embedded")
+os.environ.setdefault("AUTH_RATE_LIMIT_PER_MINUTE", "10000")
+os.environ.setdefault("RATE_LIMIT_PER_MINUTE", "100000")
 
 
 @pytest.fixture(scope="session")
