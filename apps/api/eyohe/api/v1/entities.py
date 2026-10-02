@@ -191,3 +191,21 @@ async def case_graph(
     case = await case_service.get_case(db, case_id)
     type_filter = {t.strip().upper() for t in types.split(",")} if types else None
     return await build_graph(db, case.id, focus=entity_id, depth=depth, types=type_filter)
+
+
+@router.post("/cases/{case_id}/graph/sync-neo4j")
+async def sync_neo4j(case_id: str, _: Analyst, db: DB) -> dict[str, Any]:
+    """Mirror the case graph into Neo4j (only when GRAPH_BACKEND=neo4j)."""
+    from eyohe.core.config import get_settings
+    from eyohe.core.errors import ConfigurationError
+
+    if get_settings().graph_backend != "neo4j":
+        raise ConfigurationError("GRAPH_BACKEND is postgresql; enable neo4j in .env to use this.")
+    from eyohe.graph.neo4j_backend import Neo4jGraphBackend
+
+    case = await case_service.get_case(db, case_id)
+    backend = Neo4jGraphBackend()
+    try:
+        return await backend.sync_case(db, case.id)
+    finally:
+        await backend.close()

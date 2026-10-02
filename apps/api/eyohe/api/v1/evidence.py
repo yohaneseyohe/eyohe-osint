@@ -254,3 +254,28 @@ async def compare_snapshots(source_id: str, _: CurrentUser, db: DB) -> dict[str,
         "new_title": b.title,
         "diff": diff[:400],
     }
+
+
+@router.post("/sources/{source_id}/screenshot", response_model=EvidenceDetail, status_code=status.HTTP_201_CREATED)
+async def screenshot_source(source_id: str, user: Analyst, db: DB) -> EvidenceDetail:
+    """Capture a public page screenshot into the vault and record it as SCREENSHOT evidence."""
+    from eyohe.services.screenshot import capture
+
+    src = await ev_service.get_source(db, source_id)
+    shot = await capture(src.case_id, src.url)
+    ev = await ev_service.create_evidence(
+        db,
+        src.case_id,
+        claim=(
+            f"Screenshot of public page {src.url} captured at {shot['captured_at'].isoformat()} "
+            f"({shot['browser']}, {shot['viewport']})"
+        ),
+        evidence_type=EvidenceType.SCREENSHOT,
+        collector="screenshot",
+        source=src,
+        collection_method=f"chromium:{user.username}",
+        structured={"sha256": shot["sha256"], "viewport": shot["viewport"], "browser": shot["browser"]},
+        artifacts=[(get_vault().read(shot["path"]), "image/png", "screenshot")],
+    )
+    await db.commit()
+    return await _evidence_detail(db, ev.id)
