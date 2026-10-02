@@ -32,9 +32,9 @@ which every claim traces back to a source, a URL and a timestamp.
 
 ```bash
 git clone <this repo> eyohe-osint && cd eyohe-osint
-make setup                      # detects Python/uv/Node/Docker/Ollama/Chromium, creates .env
+make setup                      # detects Python/uv/Node/Docker/Ollama/Chromium, writes .env,
+                                # and picks PostgreSQL if it is running, otherwise SQLite
 make install                    # uv sync (API) + npm install (web)
-docker compose up -d postgres redis               # or keep the SQLite fallback in .env
 docker compose --profile search up -d searxng     # recommended search provider (self-hosted)
 make migrate
 make dev                        # API http://127.0.0.1:8000  ·  UI http://localhost:3000

@@ -35,6 +35,15 @@ if [ ! -f .env ]; then
   secret=$(python3 -c 'import secrets;print(secrets.token_urlsafe(48))')
   sed -i "s|^SECRET_KEY=.*|SECRET_KEY=${secret}|" .env
   ok "Created .env with a generated SECRET_KEY"
+  # Pick a database that actually works on this machine instead of failing at `make migrate`.
+  if (timeout 3 bash -c "cat < /dev/null > /dev/tcp/127.0.0.1/5432") 2>/dev/null; then
+    ok "PostgreSQL is reachable on 127.0.0.1:5432 — using it"
+  else
+    sed -i 's|^DATABASE_URL=postgresql|# DATABASE_URL=postgresql|' .env
+    sed -i 's|^# DATABASE_URL=sqlite|DATABASE_URL=sqlite|' .env
+    warn "PostgreSQL not reachable — defaulted to the SQLite file database (./data/eyohe.sqlite3)."
+    warn "For real investigations start PostgreSQL (docker compose up -d postgres) and switch DATABASE_URL in .env."
+  fi
 else
   ok ".env already exists (left unchanged)"
 fi
@@ -46,8 +55,12 @@ if [ "$missing" -eq 1 ]; then
   bad "Some required dependencies are missing. Install them and re-run: make setup"
   exit 1
 fi
+db=$(grep -E "^DATABASE_URL=" .env | head -1 | cut -d= -f2-)
 echo "Next steps:"
 echo "  make install          # install API + web dependencies"
-echo "  docker compose up -d postgres redis   # or set DATABASE_URL to the SQLite fallback in .env"
-echo "  make migrate && make seed"
-echo "  make dev              # http://localhost:3000"
+case "$db" in
+  sqlite*) echo "  (using SQLite: ${db})" ;;
+  *)       echo "  docker compose up -d postgres redis   # if not already running" ;;
+esac
+echo "  make migrate"
+echo "  make dev              # then open http://localhost:3000 and create your admin account"
