@@ -6,8 +6,16 @@ const apiInternalUrl = process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8000";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Dev-only: lets the HMR client connect when the app is opened via 127.0.0.1 instead of localhost.
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${apiInternalUrl}/api/:path*` }];
+    // `fallback` so the few route handlers under src/app/api (e.g. the SSE
+    // passthrough) take precedence; everything else is proxied to FastAPI.
+    return {
+      beforeFiles: [],
+      afterFiles: [],
+      fallback: [{ source: "/api/:path*", destination: `${apiInternalUrl}/api/:path*` }],
+    };
   },
 };
 

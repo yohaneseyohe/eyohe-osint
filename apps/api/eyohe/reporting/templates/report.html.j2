@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>{{ d.case.display_id }} — Eyohe OSINT Investigation Report</title>
+<style>
+@page { size: A4; margin: 20mm 16mm 22mm 16mm; @bottom-left { content: "{{ d.case.display_id }} · {{ d.classification }}"; font: 8pt 'DejaVu Sans', sans-serif; color: #6b7280; } @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 8pt 'DejaVu Sans', sans-serif; color: #6b7280; } }
+body { font-family: 'Inter', 'DejaVu Sans', Helvetica, Arial, sans-serif; font-size: 10pt; color: #111827; line-height: 1.45; margin: 0; }
+.cover { background: #070b14; color: #e5e7eb; padding: 60px 48px; min-height: 240mm; page-break-after: always; }
+.cover .brand { font-size: 22pt; letter-spacing: .18em; font-weight: 700; color: #93c5fd; }
+.cover .tag { color: #9ca3af; letter-spacing: .08em; font-size: 9pt; margin-top: 4px; }
+.cover h1 { font-size: 26pt; margin: 90px 0 6px; font-weight: 600; }
+.cover .meta { margin-top: 36px; font-family: 'JetBrains Mono', 'DejaVu Sans Mono', monospace; font-size: 9.5pt; color: #cbd5e1; }
+.cover .meta div { margin: 4px 0; } .cover .meta span { color: #6b7280; display: inline-block; width: 120px; }
+.cover .cls { position: absolute; top: 24px; right: 32px; border: 1px solid #3b82f6; color: #93c5fd; padding: 4px 10px; font-size: 9pt; letter-spacing: .12em; }
+h2 { font-size: 14pt; margin: 26px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #1e3a8a; color: #0f172a; page-break-after: avoid; }
+h3 { font-size: 11pt; margin: 16px 0 6px; color: #1e293b; page-break-after: avoid; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 8.8pt; page-break-inside: auto; }
+th, td { border: 1px solid #d1d5db; padding: 4px 6px; vertical-align: top; text-align: left; }
+th { background: #eef2ff; font-weight: 600; } tr { page-break-inside: avoid; }
+.mono { font-family: 'JetBrains Mono', 'DejaVu Sans Mono', monospace; font-size: 8.5pt; }
+.badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 8pt; font-weight: 600; border: 1px solid #cbd5e1; }
+.c-CONFIRMED{background:#dcfce7;border-color:#16a34a} .c-CORROBORATED{background:#ccfbf1;border-color:#0d9488} .c-SUPPORTED{background:#dbeafe;border-color:#2563eb}
+.c-POSSIBLE{background:#e2e8f0} .c-INFERENCE{background:#ede9fe;border-color:#7c3aed} .c-UNVERIFIED{background:#fef3c7;border-color:#d97706} .c-CONTRADICTED{background:#fee2e2;border-color:#dc2626}
+.finding { border: 1px solid #e5e7eb; border-left: 4px solid #1e3a8a; padding: 8px 12px; margin: 10px 0; page-break-inside: avoid; }
+.finding .id { font-family: monospace; color: #475569; font-size: 8.5pt; }
+.muted { color: #6b7280; } .small { font-size: 8.5pt; } .demo { background:#fef3c7; border:1px solid #d97706; padding:6px 10px; font-weight:600; }
+ul { margin: 4px 0 8px 18px; } .wrap { word-break: break-all; }
+.tl { border-left: 2px solid #cbd5e1; margin-left: 6px; padding-left: 14px; } .tl div { margin: 6px 0; page-break-inside: avoid; }
+.tl .date { font-family: monospace; color: #1e3a8a; font-weight: 600; }
+</style></head><body>
+<div class="cover"><div class="cls">{{ d.classification }}</div>
+<div class="brand">EYOHE OSINT</div><div class="tag">PUBLIC INTELLIGENCE. CONNECTED EVIDENCE.</div>
+<h1>Investigation Report</h1><div style="font-size:14pt;color:#cbd5e1">{{ d.case.name }}</div>
+{% if d.case.is_demo %}<div class="demo" style="margin-top:18px;display:inline-block">DEMO DATA — fictional case</div>{% endif %}
+<div class="meta"><div><span>Case ID</span>{{ d.case.display_id }}</div><div><span>Generated</span>{{ d.generated_at.strftime('%Y-%m-%d %H:%M UTC') }}</div><div><span>Analyst</span>{{ d.analyst }}</div><div><span>Targets</span>{{ d.targets|map(attribute='value')|join(', ') }}</div><div><span>Classification</span>{{ d.classification }}</div><div><span>Platform</span>Eyohe OSINT v{{ d.version }}</div></div>
+</div>
+
+<h2>1. Executive Summary</h2>
+{% if d.case.is_demo %}<p class="demo">DEMO DATA — every entity in this report is fictional.</p>{% endif %}
+<p>This report consolidates public-source research for <strong>{{ d.case.name }}</strong> ({{ d.case.display_id }}). {{ d.stats.sources }} sources were collected by {{ d.stats.collectors|length }} collector(s), producing {{ d.stats.evidence }} evidence records, {{ d.stats.entities }} entities, {{ d.stats.relationships }} evidence-backed relationships and {{ d.stats.findings }} findings.
+{% if d.stats.confidence %}Finding confidence: {% for k, v in d.stats.confidence.items() %}{{ v }} {{ k }}{% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}</p>
+{% if d.findings %}<ul>{% for f in d.findings[:6] %}<li><span class="badge c-{{ f.confidence }}">{{ f.confidence }}</span> {{ f.title }} <span class="muted small">({{ f.id }}; {{ f.supporting|length }} supporting / {{ f.contradicting|length }} contradicting)</span></li>{% endfor %}</ul>{% else %}<p class="muted">No findings have been recorded yet.</p>{% endif %}
+
+<h2>2. Investigation Objective</h2><p>{{ d.case.objective or 'No objective recorded.' }}</p>
+{% for inv in d.investigations %}<p class="small"><span class="mono">{{ inv.display_id }}</span> — {{ inv.name }} · status {{ inv.status }} · plan source: {{ inv.plan_source }}{% if inv.plan_rationale %}<br><span class="muted">{{ inv.plan_rationale }}</span>{% endif %}</p>{% endfor %}
+
+<h2>3. Targets</h2>
+<table><tr><th>Type</th><th>Value</th><th>Label</th><th>Primary</th></tr>{% for t in d.targets %}<tr><td>{{ t.type }}</td><td class="mono">{{ t.normalized_value }}</td><td>{{ t.label }}</td><td>{{ 'yes' if t.is_primary else '' }}</td></tr>{% endfor %}</table>
+
+<h2>4. Key Findings</h2>
+<p class="small muted">Confidence labels are computed from the attached evidence (independent sources, source tier, contradictions, analyst review), not asserted by an AI.</p>
+{% for f in d.findings %}<div class="finding"><div class="id">{{ f.id }} · {{ f.category }} · proposed by {{ f.proposed_by }} · review: {{ f.review_state }}</div>
+<h3 style="margin:4px 0">{{ f.title }} <span class="badge c-{{ f.confidence }}">{{ f.confidence }}</span></h3>
+<p><strong>Claim.</strong> {{ f.claim }}</p>{% if f.assessment %}<p><strong>Assessment.</strong> {{ f.assessment }}</p>{% endif %}
+{% if f.rationale.reasons %}<p class="small"><strong>Why this confidence:</strong> {{ f.rationale.reasons|join(' ') }}</p>{% endif %}
+<p class="small"><strong>Supporting evidence:</strong> {% for e in f.supporting %}<span class="mono">{{ e.id }}</span>{% if e.source_id %} ({{ e.source_id }}){% endif %}{% if not loop.last %}, {% endif %}{% else %}none{% endfor %}</p>
+{% if f.contradicting %}<p class="small"><strong>Contradicting evidence (CONFLICTING SOURCES):</strong> {% for e in f.contradicting %}<span class="mono">{{ e.id }}</span>{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+</div>{% else %}<p class="muted">None.</p>{% endfor %}
+
+<h2>5. Entity Analysis</h2>
+<table><tr><th>ID</th><th>Type</th><th>Value</th><th>Confidence</th><th>Evidence</th><th>First seen</th></tr>
+{% for e in d.entities[:150] %}<tr><td class="mono">{{ e.display_id }}</td><td>{{ e.type }}</td><td class="wrap">{{ e.value }}{% if e.is_target %} <span class="badge">TARGET</span>{% endif %}</td><td><span class="badge c-{{ e.confidence }}">{{ e.confidence }}</span></td><td>{{ e.source_count }}</td><td class="mono">{{ e.first_seen.strftime('%Y-%m-%d') }}</td></tr>{% endfor %}</table>
+{% if d.entities|length > 150 %}<p class="muted small">{{ d.entities|length - 150 }} further entities omitted; see the export.</p>{% endif %}
+
+<h2>6. Relationship Graph</h2>
+<table><tr><th>ID</th><th>Source</th><th>Relationship</th><th>Target</th><th>Confidence</th><th>Evidence</th></tr>
+{% for r in d.relationships[:200] %}<tr><td class="mono">{{ r.id }}</td><td class="wrap">{{ r.source }}<br><span class="muted small">{{ r.source_type }}</span></td><td>{{ r.type }}</td><td class="wrap">{{ r.target }}<br><span class="muted small">{{ r.target_type }}</span></td><td><span class="badge c-{{ r.confidence }}">{{ r.confidence }}</span>{% if r.review_state != 'PENDING' %}<br><span class="small">{{ r.review_state }}</span>{% endif %}</td><td class="mono small">{{ r.evidence_ids|join(', ') }}</td></tr>{% else %}<tr><td colspan="6" class="muted">No relationships.</td></tr>{% endfor %}</table>
+
+<h2>7. Timeline</h2>
+<div class="tl">{% for t in d.timeline %}<div><span class="date">{{ t.occurred_at.strftime('%Y-%m-%d') if t.precision != 'year' else t.occurred_at.strftime('%Y') }}</span> — {{ t.title }} <span class="badge c-{{ t.confidence }}">{{ t.confidence }}</span>{% if t.description %}<br><span class="muted small">{{ t.description }}</span>{% endif %}</div>{% else %}<p class="muted">No dated events.</p>{% endfor %}</div>
+
+<h2>8. Technical Findings</h2>
+{% set tech = d.evidence|selectattr('type', 'in', ['TECHNICAL_RECORD','ARCHIVE_SNAPSHOT','DOCUMENT'])|list %}
+<table><tr><th>Evidence</th><th>Record</th><th>Source</th><th>Collected</th></tr>{% for e in tech[:120] %}<tr><td class="mono">{{ e.id }}</td><td>{{ e.claim }}</td><td class="wrap small">{% if e.source %}<span class="mono">{{ e.source.id }}</span> {{ e.source.url }}{% endif %}</td><td class="mono">{{ e.collected_at.strftime('%Y-%m-%d') }}</td></tr>{% else %}<tr><td colspan="4" class="muted">None.</td></tr>{% endfor %}</table>
+
+<h2>9. Social / Public-Source Findings</h2>
+{% set soc = d.evidence|selectattr('type', 'in', ['PUBLIC_STATEMENT','ALLEGATION','DIRECT_STATEMENT'])|list %}
+<p class="small muted">Statements by third parties are reported as statements, never converted into facts. Allegations are labelled as such.</p>
+<table><tr><th>Evidence</th><th>Language</th><th>Statement</th><th>Source</th></tr>{% for e in soc[:120] %}<tr><td class="mono">{{ e.id }}</td><td class="small">{{ e.language }}</td><td>{{ e.claim }}{% if e.excerpt %}<br><span class="muted small">“{{ e.excerpt[:220] }}”{% if e.excerpt_verified %} ✓ verbatim{% endif %}</span>{% endif %}</td><td class="wrap small">{% if e.source %}<span class="mono">{{ e.source.id }}</span> {{ e.source.url }}{% if e.source.published_at %}<br>published {{ e.source.published_at.strftime('%Y-%m-%d') }}{% endif %}{% endif %}</td></tr>{% else %}<tr><td colspan="4" class="muted">None.</td></tr>{% endfor %}</table>
+
+<h2>10. Source Analysis</h2>
+<p class="small">Source tiers: {% for k, v in d.stats.source_tiers.items() %}{{ v }} × {{ k }}{% if not loop.last %}; {% endif %}{% endfor %}.</p>
+<table><tr><th>ID</th><th>Title / URL</th><th>Type</th><th>Tier</th><th>Published</th><th>Collected</th><th>Collector</th></tr>
+{% for s in d.sources[:250] %}<tr><td class="mono">{{ s.display_id }}</td><td class="wrap">{{ s.title[:90] }}<br><span class="mono small">{{ s.url }}</span></td><td>{{ s.source_type }}</td><td>{{ s.tier }}</td><td class="mono">{{ s.published_at.strftime('%Y-%m-%d') if s.published_at else '—' }}</td><td class="mono">{{ s.collected_at.strftime('%Y-%m-%d') }}</td><td>{{ s.collector }}</td></tr>{% endfor %}</table>
+
+<h2>11. Evidence Index</h2>
+<table><tr><th>ID</th><th>Type</th><th>Claim</th><th>Source</th><th>Confidence</th><th>Review</th></tr>
+{% for e in d.evidence %}<tr><td class="mono">{{ e.id }}</td><td class="small">{{ e.type }}</td><td>{{ e.claim }}</td><td class="mono small">{{ e.source.id if e.source else e.collector }}</td><td><span class="badge c-{{ e.confidence }}">{{ e.confidence }}</span></td><td class="small">{{ e.review_state }}</td></tr>{% endfor %}</table>
+
+<h2>12. Limitations</h2><ul>{% for l in d.limitations %}<li>{{ l }}</li>{% endfor %}</ul>
+
+<h2>13. Methodology</h2>
+<p>Eyohe OSINT transforms the investigation request into a plan of collection tasks ({{ d.stats.collectors|join(', ') if d.stats.collectors else 'none run' }}). Each collector records sources with URL, retrieval timestamp and content hash; evidence records cite a source and, where applicable, a verbatim excerpt that is validated against the stored snapshot. Entities are extracted deterministically and linked to evidence; relationships require at least one evidence record. Confidence is computed by a rule engine (independent sources, source tier, contradictions, analyst review); identity claims are capped at POSSIBLE until an analyst confirms them. AI assistance (local model) is limited to plan adaptation, bounded research with quote-validated evidence creation, and drafting findings that cite existing evidence IDs.</p>
+{% for inv in d.investigations %}<h3>{{ inv.display_id }} task log</h3><table><tr><th>Task</th><th>Category</th><th>Status</th><th>Why</th></tr>{% for t in d.tasks[inv.id] %}<tr><td>{{ t.title }}</td><td>{{ t.category }}</td><td>{{ t.status }}{% if t.error %}<br><span class="small muted">{{ t.error[:120] }}</span>{% endif %}</td><td class="small">{{ t.rationale }}</td></tr>{% endfor %}</table>{% endfor %}
+
+<h2>14. References</h2>
+<ol class="small">{% for s in d.sources %}<li><span class="mono">{{ s.display_id }}</span> {{ s.title[:100] }}{% if s.publisher %} — {{ s.publisher }}{% endif %}{% if s.author %}, {{ s.author }}{% endif %}. <span class="mono wrap">{{ s.url }}</span> (collected {{ s.collected_at.strftime('%Y-%m-%d') }})</li>{% endfor %}</ol>
+<p class="muted small" style="margin-top:30px">Generated by Eyohe OSINT v{{ d.version }} on {{ d.generated_at.strftime('%Y-%m-%d %H:%M UTC') }} · {{ d.case.display_id }} · {{ d.classification }}</p>
+</body></html>

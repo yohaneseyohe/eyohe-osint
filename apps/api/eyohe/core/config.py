@@ -62,8 +62,8 @@ class Settings(BaseSettings):
     # AI
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "qwen3:8b"
-    ollama_timeout_seconds: int = 180
-    ollama_num_ctx: int = 16384
+    ollama_timeout_seconds: int = 600
+    ollama_num_ctx: int = 8192
 
     # Search
     search_providers: str = "searxng"

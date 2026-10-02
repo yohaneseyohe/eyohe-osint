@@ -122,15 +122,21 @@ class DNSCollector(BaseCollector):
             key = f"dns-{rt}"
             ents: list[EntityItem] = [domain_entity]
             for v in vals:
+                if not v.strip():
+                    continue
                 if rt in ("A", "AAAA"):
                     ents.append(EntityItem(EntityType.IP, v))
                 elif rt == "NS":
                     ents.append(EntityItem(EntityType.NAMESERVER, v))
                 elif rt == "MX":
-                    ents.append(EntityItem(EntityType.MAIL_SERVER, v.split(" ", 1)[1]))
+                    exchange = v.split(" ", 1)[1].strip() if " " in v else ""
+                    if exchange:  # "0 ." is a null MX: the domain explicitly accepts no mail
+                        ents.append(EntityItem(EntityType.MAIL_SERVER, exchange))
                 elif rt == "CNAME":
                     ents.append(EntityItem(EntityType.DOMAIN, v))
             claim = f"DNS {rt} record(s) for {domain}: {', '.join(vals)[:300]}"
+            if rt == "MX" and all(not (v.split(" ", 1)[1].strip() if " " in v else "") for v in vals):
+                claim = f"DNS MX for {domain} is a null MX record (the domain publishes that it accepts no email)"
             if rt == "TXT":
                 spf = [v for v in vals if v.lower().startswith("v=spf1")]
                 claim = (
@@ -140,7 +146,7 @@ class DNSCollector(BaseCollector):
                 )
                 for v in vals:
                     for tok in v.split():
-                        if tok.startswith("include:"):
+                        if tok.startswith("include:") and len(tok) > 8:
                             ents.append(EntityItem(EntityType.DOMAIN, tok.split(":", 1)[1].rstrip(".")))
             if rt == "DMARC":
                 claim = f"DMARC policy published for {domain}: {vals[0][:160]}"

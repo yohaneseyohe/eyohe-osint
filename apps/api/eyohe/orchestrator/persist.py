@@ -151,7 +151,11 @@ async def persist_result(
             evidence_by_key[item.key] = ev
         ent_ids: list[uuid.UUID] = []
         for e in item.entities:
-            ent = await _upsert(session, case_id, e, ev.id, existing_entity_ids, stats)
+            try:
+                ent = await _upsert(session, case_id, e, ev.id, existing_entity_ids, stats)
+            except ValueError:
+                stats.rejected += 1
+                continue
             ent_ids.append(ent.id)
         if ent_ids:
             await evidence_service.link_entities(session, ev, ent_ids)
@@ -172,15 +176,22 @@ async def persist_result(
             )
 
     for e in result.entities:
-        await _upsert(session, case_id, e, None, existing_entity_ids, stats)
+        try:
+            await _upsert(session, case_id, e, None, existing_entity_ids, stats)
+        except ValueError:
+            stats.rejected += 1
 
     for r in result.relationships:
         ev_ids = [evidence_by_key[k].id for k in r.evidence_keys if k in evidence_by_key]
         if not ev_ids:
             stats.rejected += 1
             continue
-        src_e = await _upsert(session, case_id, r.source, None, existing_entity_ids, stats)
-        dst_e = await _upsert(session, case_id, r.target, None, existing_entity_ids, stats)
+        try:
+            src_e = await _upsert(session, case_id, r.source, None, existing_entity_ids, stats)
+            dst_e = await _upsert(session, case_id, r.target, None, existing_entity_ids, stats)
+        except ValueError:
+            stats.rejected += 1
+            continue
         if src_e.id == dst_e.id:
             continue
         rel = await entity_service.create_relationship(
@@ -260,6 +271,9 @@ async def _upsert(
     stats: PersistStats,
 ) -> Entity:
     from sqlalchemy import select
+
+    if not e.value or not e.value.strip() or len(e.value) > 2000:
+        raise ValueError(f"collector produced an invalid {e.type} entity value {e.value!r}")
 
     norm = entity_service.normalize_entity_value(e.type, e.value)
     existed = (

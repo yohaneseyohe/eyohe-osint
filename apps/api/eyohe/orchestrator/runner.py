@@ -65,6 +65,8 @@ async def run_investigation(investigation_id: str) -> None:
             max_runtime = int(inv.bounds.get("max_runtime_seconds", 1800))
 
             for task in sorted(inv.tasks, key=lambda t: t.order):
+                # A previous task may have rolled back the session (expiring every instance); reload explicitly.
+                await session.refresh(task)
                 if not task.enabled or task.status in (TaskStatus.COMPLETED, TaskStatus.SKIPPED, TaskStatus.DISABLED):
                     continue
                 flag = await _control(session, inv_id)
@@ -237,6 +239,8 @@ async def _run_task(ctx: RunContext, task: InvestigationTask) -> None:
         await session.rollback()
         # Rollback expired every instance; reload explicitly (no implicit lazy IO in async code).
         await session.refresh(inv)
+        await session.refresh(ctx.case)
+        await session.refresh(ctx.target)
         reloaded = await session.get(InvestigationTask, task_id, populate_existing=True)
         if reloaded is not None:
             task = reloaded

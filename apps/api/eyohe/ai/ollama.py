@@ -58,12 +58,14 @@ class OllamaClient:
         purpose: str = "chat",
         think: bool | None = False,
         max_tokens: int = 2048,
+        num_ctx: int | None = None,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "stream": False,
-            "options": {"temperature": temperature, "num_ctx": self.num_ctx, "num_predict": max_tokens},
+            "keep_alive": "30m",
+            "options": {"temperature": temperature, "num_ctx": num_ctx or self.num_ctx, "num_predict": max_tokens},
         }
         if tools:
             payload["tools"] = tools
@@ -107,6 +109,7 @@ class OllamaClient:
         purpose: str = "json",
         max_tokens: int = 2048,
         temperature: float = 0.1,
+        num_ctx: int | None = None,
     ) -> Any:
         data = await self.chat(
             messages,
@@ -115,6 +118,7 @@ class OllamaClient:
             purpose=purpose,
             max_tokens=max_tokens,
             temperature=temperature,
+            num_ctx=num_ctx,
         )
         content = data.get("message", {}).get("content", "")
         return parse_json_loose(content)

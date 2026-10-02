@@ -16,7 +16,10 @@ export interface SearchResult {
  */
 export function useSearch() {
   return useMutation({
-    mutationFn: async (_q: string): Promise<{ available: false; results: SearchResult[] }> => ({ available: false, results: [] }),
+    mutationFn: async (q: string): Promise<{ available: false; results: SearchResult[] }> => {
+      void q; // kept so the call signature matches the future API
+      return { available: false, results: [] };
+    },
   });
 }
 

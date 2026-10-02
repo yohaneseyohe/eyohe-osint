@@ -113,8 +113,9 @@ async def plan_investigation(
     session: AsyncSession, inv: Investigation, actor: User | None, *, use_ai: bool = True
 ) -> Investigation:
     """Generate the plan (template, optionally adapted by Ollama) and move to AWAITING_APPROVAL."""
-    assert_transition(inv.status, InvestigationStatus.PLANNING)
-    inv.status = InvestigationStatus.PLANNING
+    if inv.status != InvestigationStatus.PLANNING:  # background jobs arrive already in PLANNING
+        assert_transition(inv.status, InvestigationStatus.PLANNING)
+        inv.status = InvestigationStatus.PLANNING
     await session.commit()
     target = await session.get(Target, uuid.UUID(inv.stats["target_id"]))
     if target is None:
@@ -258,6 +259,9 @@ async def add_custom_task(
 
 async def approve_and_start(session: AsyncSession, inv: Investigation, actor: User) -> Investigation:
     assert_transition(inv.status, InvestigationStatus.RUNNING)
+    await session.refresh(inv, attribute_names=["tasks"])
+    if not any(t.enabled for t in inv.tasks):
+        raise ValidationError("This investigation has no enabled tasks. Generate or edit the plan before approving it.")
     inv.approved_by = actor.id
     inv.approved_at = utcnow()
     inv.control_flag = None

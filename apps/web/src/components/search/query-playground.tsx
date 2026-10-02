@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Search } from "lucide-react";
 import { useHealth } from "@/lib/queries";
 import { useSearch, SEARCH_AVAILABLE } from "@/hooks/use-search";
@@ -16,18 +16,21 @@ import { Mono } from "@/components/shared/mono";
 
 export function QueryPlayground() {
   const params = useSearchParams();
-  const [q, setQ] = useState(params.get("q") ?? "");
-  const [submitted, setSubmitted] = useState<string | null>(null);
+  const urlQuery = params.get("q") ?? "";
+  const [q, setQ] = useState(urlQuery);
+  const [submitted, setSubmitted] = useState<string | null>(urlQuery || null);
+  // Adopt a new ?q= from the command palette while already on this page.
+  const [seenUrlQuery, setSeenUrlQuery] = useState(urlQuery);
+  if (urlQuery !== seenUrlQuery) {
+    setSeenUrlQuery(urlQuery);
+    setQ(urlQuery);
+    setSubmitted(urlQuery || null);
+  }
   const health = useHealth(30_000);
   const search = useSearch();
   const comp = health.data?.components.find((c) => c.name === "search");
   const configured = Array.isArray(comp?.detail.configured) ? (comp.detail.configured as string[]) : [];
   const problems = Array.isArray(comp?.detail.problems) ? (comp.detail.problems as string[]) : [];
-
-  useEffect(() => {
-    const initial = params.get("q");
-    if (initial) { setQ(initial); setSubmitted(initial); }
-  }, [params]);
 
   return (
     <div className="space-y-4">

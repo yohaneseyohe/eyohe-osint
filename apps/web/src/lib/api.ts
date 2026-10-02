@@ -36,7 +36,8 @@ function redirectToLogin(): void {
   const here = window.location.pathname;
   if (AUTH_PATHS.some((p) => here.startsWith(p))) return;
   const next = encodeURIComponent(here + window.location.search);
-  window.location.assign(`/login?next=${next}`);
+  // Full navigation (not router.push) so all in-memory query state is dropped with the session.
+  window.location.assign(new URL(`/login?next=${next}`, window.location.origin).toString());
 }
 
 async function parseError(res: Response): Promise<ApiError> {

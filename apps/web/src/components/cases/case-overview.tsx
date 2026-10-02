@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Archive, Copy, Crosshair, Play, Plus, Trash2 } from "lucide-react";
@@ -91,10 +92,11 @@ function Investigations({ caseId, onNew }: { caseId: string; onNew: () => void }
 
 export function CaseOverview({ c }: { c: CaseDetail }) {
   const qc = useQueryClient();
+  const router = useRouter();
   const [newOpen, setNewOpen] = useState(false);
   const clone = useMutation({
     mutationFn: () => apiPost<CaseDetail>(`/cases/${c.id}/clone`, { name: `${c.name} (copy)` }),
-    onSuccess: (n) => { qc.invalidateQueries({ queryKey: ["cases"] }); toast.success("Case cloned", `${n.display_id} · ${n.name}`); window.location.assign(`/cases/${n.id}`); },
+    onSuccess: (n) => { qc.invalidateQueries({ queryKey: ["cases"] }); toast.success("Case cloned", `${n.display_id} · ${n.name}`); router.push(`/cases/${n.id}`); },
     onError: (e) => toast.error("Clone failed", errorMessage(e)),
   });
   const archive = useMutation({
