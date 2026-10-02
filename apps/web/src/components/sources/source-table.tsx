@@ -16,8 +16,8 @@ import { truncate } from "@/lib/utils";
 const PAGE_SIZE = 50;
 const TIERS = ["1", "2", "3", "4", "5"];
 
-export function SourceTable({ caseId }: { caseId: string }) {
-  const [q, setQ] = useState("");
+export function SourceTable({ caseId, initialQuery = "" }: { caseId: string; initialQuery?: string }) {
+  const [q, setQ] = useState(initialQuery);
   const [type, setType] = useState("");
   const [maxTier, setMaxTier] = useState("");
   const [page, setPage] = useState(1);

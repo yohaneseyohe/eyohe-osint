@@ -16,16 +16,25 @@ import { truncate } from "@/lib/utils";
 
 const PAGE_SIZE = 50;
 
-export function EvidenceTable({ caseId, initialEvidenceId }: { caseId: string; initialEvidenceId?: string | null }) {
-  const [q, setQ] = useState("");
-  const [type, setType] = useState("");
-  const [review, setReview] = useState("");
-  const [confidence, setConfidence] = useState("");
+export interface EvidenceFilters {
+  q?: string;
+  evidence_type?: string;
+  review_state?: string;
+  confidence?: string;
+  collector?: string;
+}
+
+export function EvidenceTable({ caseId, initialEvidenceId, initialFilters }: { caseId: string; initialEvidenceId?: string | null; initialFilters?: EvidenceFilters }) {
+  const [q, setQ] = useState(initialFilters?.q ?? "");
+  const [type, setType] = useState(initialFilters?.evidence_type ?? "");
+  const [review, setReview] = useState(initialFilters?.review_state ?? "");
+  const [confidence, setConfidence] = useState(initialFilters?.confidence ?? "");
+  const [collector, setCollector] = useState(initialFilters?.collector ?? "");
   const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(initialEvidenceId ?? null);
-  const params = { q, evidence_type: type, review_state: review, confidence, page, page_size: PAGE_SIZE };
+  const params = { q, evidence_type: type, review_state: review, confidence, collector, page, page_size: PAGE_SIZE };
   const query = useEvidenceList(caseId, params);
-  const hasFilters = !!(q || type || review || confidence);
+  const hasFilters = !!(q || type || review || confidence || collector);
 
   return (
     <div>
@@ -36,6 +45,7 @@ export function EvidenceTable({ caseId, initialEvidenceId }: { caseId: string; i
           setType("");
           setReview("");
           setConfidence("");
+          setCollector("");
           setPage(1);
         }}
       >
@@ -43,6 +53,7 @@ export function EvidenceTable({ caseId, initialEvidenceId }: { caseId: string; i
         <FilterSelect value={type} onChange={(v) => { setType(v); setPage(1); }} options={EVIDENCE_TYPES} placeholder="All types" />
         <FilterSelect value={review} onChange={(v) => { setReview(v); setPage(1); }} options={REVIEW_ORDER} placeholder="All review states" />
         <FilterSelect value={confidence} onChange={(v) => { setConfidence(v); setPage(1); }} options={CONFIDENCE_ORDER} placeholder="All confidence" format={(v) => v} />
+        <SearchInput value={collector} onChange={(v) => { setCollector(v); setPage(1); }} placeholder="Collector…" className="w-40" />
       </FilterBar>
       <QueryState
         query={query}

@@ -5,7 +5,12 @@ import { useEffect, useState } from "react";
 import { Activity, Briefcase, Clock, FileText, Globe, LayoutDashboard, Network, Search, Settings, ShieldCheck, Users } from "lucide-react";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Mono } from "@/components/shared/mono";
+import { useMutation } from "@tanstack/react-query";
+import { apiPost, errorMessage } from "@/lib/api";
 import { useCases } from "@/lib/queries";
+import { useUiStore } from "@/lib/store";
+import type { AIQueryResponse } from "@/lib/types";
+import { toast } from "@/components/ui/toast";
 
 const PAGES = [
   { href: "/", label: "Command Center", icon: LayoutDashboard },
@@ -25,6 +30,19 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const router = useRouter();
   const [query, setQuery] = useState("");
   const cases = useCases({ page_size: 50 });
+  const selectedCase = useUiStore((s) => s.selectedCaseId);
+  const askEyohe = useMutation({
+    mutationFn: (question: string) => apiPost<AIQueryResponse>("/ai/query", { case_id: selectedCase, question, mode: "route" }),
+    onSuccess: (r, question) => {
+      // Intent routes are case-relative; without a case the backend returns a bare "?tab=…" we cannot use.
+      const route = r.intent.route;
+      if (route.startsWith("/")) go(route);
+      else if (r.intent.kind === "ask") { toast.info("Select a case to ask the analyst", "Pick a case on any case page, then ask again."); go(`/search?q=${encodeURIComponent(question)}`); }
+      else go(`/search?q=${encodeURIComponent(question)}`);
+    },
+    onError: (e, question) => { toast.error("Could not interpret the request", errorMessage(e)); go(`/search?q=${encodeURIComponent(question)}`); },
+  });
+  const submitFreeText = (text: string) => askEyohe.mutate(text.trim());
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -48,12 +66,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       <CommandInput
         value={query}
         onValueChange={setQuery}
-        placeholder="Ask Eyohe anything… (Enter to search)"
+        placeholder="Ask Eyohe anything… (Enter to ask)"
         onKeyDown={(e) => {
           // Free text submits to the Query Playground when nothing in the list matched.
           if (e.key === "Enter" && query.trim() && !document.querySelector('[cmdk-item][data-selected="true"]')) {
             e.preventDefault();
-            go(`/search?q=${encodeURIComponent(query.trim())}`);
+            submitFreeText(query);
           }
         }}
       />
@@ -63,8 +81,11 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         </CommandEmpty>
         {query.trim() ? (
           <CommandGroup heading="Search">
+            <CommandItem value={`ask ${query}`} onSelect={() => submitFreeText(query)}>
+              <Search /> Ask Eyohe: “{query.trim()}”{selectedCase ? "" : " (no case selected)"}
+            </CommandItem>
             <CommandItem value={`search ${query}`} onSelect={() => go(`/search?q=${encodeURIComponent(query.trim())}`)}>
-              <Search /> Search for “{query.trim()}”
+              <Search /> Run as web search
             </CommandItem>
           </CommandGroup>
         ) : null}

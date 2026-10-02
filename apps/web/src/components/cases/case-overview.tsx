@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Archive, Copy, Crosshair, Play, Plus, Trash2 } from "lucide-react";
+import { Archive, Copy, Crosshair, Play, Plus, Trash2, Upload } from "lucide-react";
 import { apiDelete, apiPatch, apiPost, errorMessage } from "@/lib/api";
 import { qk, useInvestigations } from "@/lib/queries";
 import type { CaseDetail, TargetOut } from "@/lib/types";
@@ -19,6 +19,7 @@ import { Mono } from "@/components/shared/mono";
 import { KeyValue } from "@/components/shared/page-header";
 import { EmptyState, QueryState } from "@/components/shared/states";
 import { NewInvestigationDialog } from "@/components/layout/new-investigation-dialog";
+import { ImportDialog } from "./import-dialog";
 import { cn } from "@/lib/utils";
 
 function Targets({ c }: { c: CaseDetail }) {
@@ -94,6 +95,7 @@ export function CaseOverview({ c }: { c: CaseDetail }) {
   const qc = useQueryClient();
   const router = useRouter();
   const [newOpen, setNewOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const clone = useMutation({
     mutationFn: () => apiPost<CaseDetail>(`/cases/${c.id}/clone`, { name: `${c.name} (copy)` }),
     onSuccess: (n) => { qc.invalidateQueries({ queryKey: ["cases"] }); toast.success("Case cloned", `${n.display_id} · ${n.name}`); router.push(`/cases/${n.id}`); },
@@ -112,6 +114,7 @@ export function CaseOverview({ c }: { c: CaseDetail }) {
           <CardHeader>
             <CardTitle>Case</CardTitle>
             <div className="flex gap-2">
+              <Button variant="outline" size="xs" onClick={() => setImportOpen(true)}><Upload /> Import</Button>
               <Button variant="outline" size="xs" onClick={() => clone.mutate()} loading={clone.isPending}><Copy /> Clone</Button>
               <Button variant="outline" size="xs" onClick={() => archive.mutate()} loading={archive.isPending}><Archive /> {c.status === "ARCHIVED" ? "Restore" : "Archive"}</Button>
             </div>
@@ -151,6 +154,7 @@ export function CaseOverview({ c }: { c: CaseDetail }) {
         <Targets c={c} />
       </div>
       <NewInvestigationDialog open={newOpen} onOpenChange={setNewOpen} defaultCaseId={c.id} />
+      <ImportDialog caseId={c.id} open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }

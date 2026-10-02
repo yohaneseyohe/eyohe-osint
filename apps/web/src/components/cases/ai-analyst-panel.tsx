@@ -1,19 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { Bot, CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { useInvestigationStatus, useInvestigations } from "@/lib/queries";
 import type { CaseDetail } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { InvestigationStatusChip } from "@/components/shared/badges";
 import { Mono } from "@/components/shared/mono";
 import { EmptyState } from "@/components/shared/states";
 import { Skeleton } from "@/components/ui/skeleton";
 
-/** Honest skeleton of the analyst panel: shows real run state, never fabricated answers. */
-export function AiAnalystPanel({ c }: { c: CaseDetail }) {
+import { AskPanel } from "@/components/ai/ask-panel";
+
+/** Run state on the left, evidence-only Q&A on the right. */
+export function AiAnalystPanel({ c, initialQuestion }: { c: CaseDetail; initialQuestion?: string }) {
   const invs = useInvestigations({ case_id: c.id });
   const latest = invs.data ? [...invs.data].sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0] : undefined;
   const status = useInvestigationStatus(latest?.id ?? null);
@@ -54,15 +55,7 @@ export function AiAnalystPanel({ c }: { c: CaseDetail }) {
           </CardContent>
         </Card>
       </div>
-      <Card className="flex flex-col self-start">
-        <CardHeader><CardTitle className="flex items-center gap-2"><Bot className="size-3.5" /> AI Analyst</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-xs text-fg-muted">
-            The analyst will answer questions strictly from this case&apos;s evidence, citing evidence IDs. It never invents sources.
-          </p>
-          <Input disabled placeholder="AI analyst chat arrives in Phase 5" aria-label="AI analyst chat (not yet available)" />
-        </CardContent>
-      </Card>
+      <div className="self-start"><AskPanel key={initialQuestion ?? ""} caseId={c.id} initialQuestion={initialQuestion} /></div>
     </div>
   );
 }

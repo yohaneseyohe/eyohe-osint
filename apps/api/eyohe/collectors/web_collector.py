@@ -27,6 +27,30 @@ from eyohe.core.netsafety import SafeHttpClient
 from eyohe.core.urlnorm import normalize_url, registrable_domain
 from eyohe.enrichment.extract import extract_entities
 
+_PLATFORM_DOMAINS = {
+    "facebook.com",
+    "instagram.com",
+    "twitter.com",
+    "x.com",
+    "linkedin.com",
+    "youtube.com",
+    "tiktok.com",
+    "reddit.com",
+    "t.me",
+    "bsky.app",
+    "mastodon.social",
+    "threads.net",
+    "pinterest.com",
+    "github.com",
+    "apple.com",
+    "google.com",
+    "googletagmanager.com",
+    "google-analytics.com",
+    "gstatic.com",
+    "cloudflare.com",
+    "w3.org",
+    "schema.org",
+}
 _TECH_HINTS = {
     "wordpress": re.compile(r"wp-content|wp-includes|wordpress", re.I),
     "drupal": re.compile(r"drupal", re.I),
@@ -268,7 +292,9 @@ class WebFetchCollector(BaseCollector):
         )
         socials = [e for e in ents if e.type == EntityType.SOCIAL_ACCOUNT]
         emails = [e for e in ents if e.type == EntityType.EMAIL]
-        ext_domains = sorted({registrable_domain(u) for u in links})[:40]
+        # Platform domains (facebook.com, instagram.com …) are noise as DOMAIN entities; the profile
+        # links themselves are captured as SOCIAL_ACCOUNT entities instead.
+        ext_domains = sorted({registrable_domain(u) for u in links} - _PLATFORM_DOMAINS)[:40]
         if links:
             res.evidence.append(
                 EvidenceItem(

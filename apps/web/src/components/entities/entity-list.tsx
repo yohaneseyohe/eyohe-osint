@@ -16,9 +16,9 @@ import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 100;
 
-export function EntityList({ caseId }: { caseId: string }) {
-  const [q, setQ] = useState("");
-  const [type, setType] = useState("");
+export function EntityList({ caseId, initialType = "", initialQuery = "" }: { caseId: string; initialType?: string; initialQuery?: string }) {
+  const [q, setQ] = useState(initialQuery);
+  const [type, setType] = useState(initialType);
   const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
   const query = useEntitiesList(caseId, { q, type, page, page_size: PAGE_SIZE });

@@ -18,8 +18,9 @@ import { FindingList } from "@/components/findings/finding-list";
 import { AiAnalystPanel } from "./ai-analyst-panel";
 import { CaseNotes } from "./case-notes";
 import { CaseOverview } from "./case-overview";
+import { ReportsPanel } from "@/components/reports/reports-panel";
 
-const TABS = ["overview", "evidence", "entities", "graph", "timeline", "sources", "findings", "notes", "analyst"] as const;
+const TABS = ["overview", "evidence", "entities", "graph", "timeline", "sources", "findings", "reports", "notes", "analyst"] as const;
 type Tab = (typeof TABS)[number];
 
 export function CaseWorkspace({ id }: { id: string }) {
@@ -28,6 +29,10 @@ export function CaseWorkspace({ id }: { id: string }) {
   const params = useSearchParams();
   const tabParam = params.get("tab");
   const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : "overview";
+  // Intent routes from the AI analyst arrive as query params (e.g. ?tab=evidence&confidence=CONTRADICTED).
+  const get = (k: string) => params.get(k) ?? "";
+  const evidenceFilters = { q: get("q"), confidence: get("confidence"), collector: get("collector"), review_state: get("review_state"), evidence_type: get("evidence_type") };
+  const filterKey = params.toString();
 
   if (query.isPending) return <LoadingState rows={8} />;
   if (query.isError) return <ErrorState error={query.error} onRetry={() => query.refetch()} />;
@@ -53,18 +58,20 @@ export function CaseWorkspace({ id }: { id: string }) {
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="sources">Sources <Mono className="text-fg-subtle">{c.source_count}</Mono></TabsTrigger>
           <TabsTrigger value="findings">Findings <Mono className="text-fg-subtle">{c.finding_count}</Mono></TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="analyst">AI Analyst</TabsTrigger>
         </TabsList>
         <TabsContent value="overview"><CaseOverview c={c} /></TabsContent>
-        <TabsContent value="evidence"><EvidenceTable caseId={c.id} /></TabsContent>
-        <TabsContent value="entities"><EntityList caseId={c.id} /></TabsContent>
+        <TabsContent value="evidence"><EvidenceTable key={filterKey} caseId={c.id} initialFilters={evidenceFilters} /></TabsContent>
+        <TabsContent value="entities"><EntityList key={filterKey} caseId={c.id} initialType={get("type")} initialQuery={get("q")} /></TabsContent>
         <TabsContent value="graph">{tab === "graph" ? <CaseGraph caseId={c.id} /> : null}</TabsContent>
         <TabsContent value="timeline"><TimelineList caseId={c.id} /></TabsContent>
-        <TabsContent value="sources"><SourceTable caseId={c.id} /></TabsContent>
-        <TabsContent value="findings"><FindingList caseId={c.id} /></TabsContent>
+        <TabsContent value="sources"><SourceTable key={filterKey} caseId={c.id} initialQuery={get("q")} /></TabsContent>
+        <TabsContent value="findings"><FindingList key={filterKey} caseId={c.id} initialConfidence={get("confidence")} /></TabsContent>
+        <TabsContent value="reports"><ReportsPanel caseId={c.id} /></TabsContent>
         <TabsContent value="notes"><CaseNotes caseId={c.id} /></TabsContent>
-        <TabsContent value="analyst"><AiAnalystPanel c={c} /></TabsContent>
+        <TabsContent value="analyst"><AiAnalystPanel c={c} initialQuestion={get("q") || undefined} /></TabsContent>
       </Tabs>
     </div>
   );

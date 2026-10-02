@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, Sparkles } from "lucide-react";
+import { apiPost, errorMessage } from "@/lib/api";
+import type { DraftFindingsOut } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 import { useFindingsList } from "@/lib/queries";
 import { CONFIDENCE_ORDER, REVIEW_ORDER } from "@/lib/labels";
 import { formatRelative } from "@/lib/format";
@@ -14,8 +19,19 @@ import { EmptyState, QueryState } from "@/components/shared/states";
 
 const PAGE_SIZE = 50;
 
-export function FindingList({ caseId }: { caseId: string }) {
-  const [confidence, setConfidence] = useState("");
+export function FindingList({ caseId, initialConfidence = "" }: { caseId: string; initialConfidence?: string }) {
+  const qc = useQueryClient();
+  const [confidence, setConfidence] = useState(initialConfidence);
+  const draft = useMutation({
+    mutationFn: () => apiPost<DraftFindingsOut>(`/ai/cases/${caseId}/draft-findings`),
+    onSuccess: (d) => {
+      qc.invalidateQueries({ queryKey: ["case", caseId] });
+      qc.invalidateQueries({ queryKey: ["cases"] });
+      if (d.note && d.created === 0) toast.info("No findings drafted", d.note);
+      else toast.success(`${d.created} finding${d.created === 1 ? "" : "s"} drafted`, d.rejected ? `${d.rejected} AI claim${d.rejected === 1 ? "" : "s"} rejected for lacking evidence citations.` : "Every claim cites evidence IDs; review them below.");
+    },
+    onError: (e) => toast.error("Drafting failed", errorMessage(e)),
+  });
   const [review, setReview] = useState("");
   const [page, setPage] = useState(1);
   const query = useFindingsList(caseId, { confidence, review_state: review, page, page_size: PAGE_SIZE });
@@ -25,6 +41,9 @@ export function FindingList({ caseId }: { caseId: string }) {
       <FilterBar showClear={hasFilters} onClear={() => { setConfidence(""); setReview(""); setPage(1); }}>
         <FilterSelect value={confidence} onChange={(v) => { setConfidence(v); setPage(1); }} options={CONFIDENCE_ORDER} placeholder="All confidence" format={(v) => v} />
         <FilterSelect value={review} onChange={(v) => { setReview(v); setPage(1); }} options={REVIEW_ORDER} placeholder="All review states" />
+        <Button size="sm" variant="secondary" className="ml-auto" onClick={() => draft.mutate()} loading={draft.isPending} title="Drafts findings from non-rejected evidence using the local model; claims without citations are rejected">
+          <Sparkles /> Draft findings from evidence (AI)
+        </Button>
       </FilterBar>
       <QueryState query={query} isEmpty={(d) => d.items.length === 0} empty={<EmptyState title={hasFilters ? "No findings match" : "No findings yet"} description={hasFilters ? "Try clearing a filter." : "Findings are drafted from collected evidence during verification; every claim cites evidence IDs."} />}>
         {(data) => (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Pause, Play, RefreshCw, Square } from "lucide-react";
+import { Loader2, Pause, Play, RefreshCw, Square } from "lucide-react";
 import { apiPost, errorMessage } from "@/lib/api";
 import { qk } from "@/lib/queries";
 import type { InvestigationDetail } from "@/lib/types";
@@ -36,6 +36,7 @@ export function InvestigationControls({ inv }: { inv: InvestigationDetail }) {
   const busy = approve.isPending || control.isPending || replan.isPending;
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {s === "PLANNING" ? <Button disabled variant="secondary"><Loader2 className="animate-spin" /> Planning…</Button> : null}
       {s === "AWAITING_APPROVAL" || s === "DRAFT" ? (
         <Button onClick={() => approve.mutate()} loading={approve.isPending} disabled={busy || inv.tasks.filter((t) => t.enabled).length === 0}>
           <Play /> Approve &amp; Run
