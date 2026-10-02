@@ -23,7 +23,7 @@ export function CasePicker({ className }: { className?: string }) {
 
   const items = cases.data?.items ?? [];
   return (
-    <Select value={selected ?? undefined} onValueChange={setSelected} disabled={items.length === 0}>
+    <Select value={selected ?? ""} onValueChange={setSelected} disabled={items.length === 0}>
       <SelectTrigger className={className ?? "w-72"} aria-label="Select case">
         <SelectValue placeholder={cases.isPending ? "Loading cases…" : "No cases yet"} />
       </SelectTrigger>
